@@ -14,16 +14,20 @@ describe("register a new user", () => {
     })
     
     it("create a new user", async () => {
-        const { email, password } = {
+        const { name, lastName, email, password,  } = {
+            name: "Alvaro",
+            lastName: "Losada de Castro",
             email: "aldc30sc@gmail.com",
-            password: "123456"
+            password: "123456",
+            emailConfirmed: false
         };
 
         const response = await supertest(app)
             .post('/v1/auth/register')
-            .send({email, password})
+            .send({name, lastName, email, password})
 
         expect(response.status).toBe(200);
+        expect(response.body.success).toBeTruthy();
     });
 
     it("check if the user already exists", async () => {
@@ -37,6 +41,15 @@ describe("register a new user", () => {
             .send({email, password})
 
         expect(response.status).toBe(401);
+    });
+
+    it("confirm register", async () => {
+
+        const response = await supertest(app)
+            .post('/v1/auth/confirmRegister?email=aldc30sc@gmail.com')
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBeTruthy();
     });
 
     afterAll(async () => {

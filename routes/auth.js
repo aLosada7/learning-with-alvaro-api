@@ -1,7 +1,8 @@
 const express = require('express');
 const {
     forgotPassword,
-    register
+    register,
+    confirmRegister
 } = require('../controllers/auth');
 
 const router = express.Router();
@@ -11,5 +12,8 @@ router
 
 router
     .post('/forgotPassword', forgotPassword);
+
+router
+    .post('/confirmRegister', confirmRegister);
 
 module.exports = router;

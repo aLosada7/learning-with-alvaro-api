@@ -11,9 +11,11 @@ const Op = db.Sequelize.Op;
 // @route POST /api/v1/auth/register
 // @access Public
 exports.register = asyncHandler(async (req, res, next) => {
-    const { name, lastName, email, password } = req.body;
+    const { name, lastName, email, password, sendEmail } = req.body;
 
-    if (await emailExists(email)) {
+    const doesEmailExists = await emailExists(email);
+
+    if (doesEmailExists) {
         return next(new ErrorResponse(`Email already exists.`, 401));
     }
 
@@ -33,13 +35,15 @@ exports.register = asyncHandler(async (req, res, next) => {
     }
 
     try {
-        /*await sendEmail({
-            to: user.email,
-            subject : "Register confirmation",
-            text: "Register confirmation",
-            template: 'emailConfirmation',
-            context: { name: user.name, validationToken }
-        });*/
+        if (!sendEmail || sendEmail !== "no") {
+            await sendEmail({
+                to: user.email,
+                subject : "Register confirmation",
+                text: "Register confirmation",
+                template: 'emailConfirmation',
+                context: { name: user.name, validationToken }
+            });
+        }
 
         res.status(200).json({ success: true, data: user })
     } catch (err) {

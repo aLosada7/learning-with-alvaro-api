@@ -23,61 +23,63 @@ const db = require("../../../models");
     }):
 });*/
 
+let validationToken = null;
+
 describe("register a new user", () => {
 
     let thisDb = db;
-    let validationToken = null;
+    const { name, lastName, email, password, sendEmail } = {
+        name: "Alvaro",
+        lastName: "Losada de Castro",
+        email: "aldc30sc@gmail.com",
+        password: "A123alvaro",
+        sendEmail: "no", // do not send and e-mail if testing
+    };
 
     beforeAll(async () => {
         await thisDb.sequelize.sync({ force: true })
     })
     
     it("create a new user", async () => {
-        const { name, lastName, email, password } = {
-            name: "Alvaro",
-            lastName: "Losada de Castro",
-            email: "aldc30sc@gmail.com",
-            password: "A123alvaro"
-        };
 
         const response = await supertest(app)
             .post('/v1/auth/register')
-            .send({name, lastName, email, password})
+            .send({ name, lastName, email, password, sendEmail })
         
-        validationToken = response.body.data.validationToken;
+        this.validationToken = response.body.data.validationToken;
 
         expect(response.status).toBe(200);
         expect(response.body.success).toBeTruthy();
     });
 
     it("check if the user already exists", async () => {
-        const { email, password } = {
-            email: "aldc30sc@gmail.com",
-            password: "A123alvaro"
-        };
 
         const response = await supertest(app)
             .post('/v1/auth/register')
-            .send({email, password})
+            .send({ email, password })
 
         expect(response.status).toBe(401);
     });
 
-    it("confirm register", async () => {
+    it("wrong register confirmation", async () => {
 
         const response = await supertest(app)
-            .post(`/v1/auth/confirmRegister?evldr=${validationToken}`);
+            .post(`/v1/auth/confirmRegister?evldr=adadada${this.validationToken}dadadadad`);
+
+        expect(response.status).toBe(401);
+        expect(response.body.success).not.toBeTruthy();
+    });
+
+    it("register confirmation", async () => {
+
+        const response = await supertest(app)
+            .post(`/v1/auth/confirmRegister?evldr=${this.validationToken}`);
 
         expect(response.status).toBe(200);
         expect(response.body.success).toBeTruthy();
     });
 
     it("login", async () => {
-
-        const { email, password } = {
-            email: "aldc30sc@gmail.com",
-            password: "A123alvaro"
-        };
 
         const response = await supertest(app)
             .post('/v1/auth/login')

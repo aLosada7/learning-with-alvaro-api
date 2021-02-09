@@ -1,19 +1,15 @@
 const { 
+    register,
     forgotPassword
 } = require('../../../controllers/auth');
 const supertest = require('supertest')
 const app = require("../../../server");
 const db = require("../../../models");
 
-describe("register a new user", () => {
+//db.Users.create = jest.fn();
 
-    let thisDb = db
-
-    beforeAll(async () => {
-        await thisDb.sequelize.sync({ force: true })
-    })
-    
-    it("create a new user", async () => {
+/*describe("call with mocks", () => {
+    it("call with mocks", () =>
         const { name, lastName, email, password,  } = {
             name: "Alvaro",
             lastName: "Losada de Castro",
@@ -22,9 +18,33 @@ describe("register a new user", () => {
             emailConfirmed: false
         };
 
+        register();
+        expect(db.Users.create).toBeCalled();
+    }):
+});*/
+
+describe("register a new user", () => {
+
+    let thisDb = db;
+    let validationToken = null;
+
+    beforeAll(async () => {
+        await thisDb.sequelize.sync({ force: true })
+    })
+    
+    it("create a new user", async () => {
+        const { name, lastName, email, password } = {
+            name: "Alvaro",
+            lastName: "Losada de Castro",
+            email: "aldc30sc@gmail.com",
+            password: "A123alvaro"
+        };
+
         const response = await supertest(app)
             .post('/v1/auth/register')
             .send({name, lastName, email, password})
+        
+        validationToken = response.body.data.validationToken;
 
         expect(response.status).toBe(200);
         expect(response.body.success).toBeTruthy();
@@ -33,7 +53,7 @@ describe("register a new user", () => {
     it("check if the user already exists", async () => {
         const { email, password } = {
             email: "aldc30sc@gmail.com",
-            password: "123456"
+            password: "A123alvaro"
         };
 
         const response = await supertest(app)
@@ -46,7 +66,22 @@ describe("register a new user", () => {
     it("confirm register", async () => {
 
         const response = await supertest(app)
-            .post('/v1/auth/confirmRegister?email=aldc30sc@gmail.com')
+            .post(`/v1/auth/confirmRegister?evldr=${validationToken}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBeTruthy();
+    });
+
+    it("login", async () => {
+
+        const { email, password } = {
+            email: "aldc30sc@gmail.com",
+            password: "A123alvaro"
+        };
+
+        const response = await supertest(app)
+            .post('/v1/auth/login')
+            .send({ email , password })
 
         expect(response.status).toBe(200);
         expect(response.body.success).toBeTruthy();

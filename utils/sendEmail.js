@@ -1,5 +1,9 @@
 const nodemailer = require('nodemailer');
+const dotenv = require('dotenv');
 const hbs = require("nodemailer-express-handlebars");
+
+// Load env vars
+dotenv.config({ path: `./config/${process.env.NODE_ENV}.env` });
 
 const transporter = nodemailer.createTransport({
     port: 465,

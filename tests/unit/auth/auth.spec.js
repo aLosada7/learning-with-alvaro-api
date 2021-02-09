@@ -6,34 +6,16 @@ const supertest = require('supertest')
 const app = require("../../../server");
 const db = require("../../../models");
 
-//db.Users.create = jest.fn();
-
-/*describe("call with mocks", () => {
-    it("call with mocks", () =>
-        const { name, lastName, email, password,  } = {
-            name: "Alvaro",
-            lastName: "Losada de Castro",
-            email: "aldc30sc@gmail.com",
-            password: "123456",
-            emailConfirmed: false
-        };
-
-        register();
-        expect(db.Users.create).toBeCalled();
-    }):
-});*/
-
-let validationToken = null;
-
 describe("register a new user", () => {
 
     let thisDb = db;
-    const { name, lastName, email, password, sendEmail } = {
+    const { name, lastName, email, password, sendEmail, newPassword } = {
         name: "Alvaro",
         lastName: "Losada de Castro",
         email: "aldc30sc@gmail.com",
         password: "A123alvaro",
         sendEmail: "no", // do not send and e-mail if testing
+        newPassword: "A456alvaro"
     };
 
     beforeAll(async () => {
@@ -89,16 +71,30 @@ describe("register a new user", () => {
         expect(response.body.success).toBeTruthy();
     });
 
+    it("request new password / forgot password", async () => {
+
+        const response = await supertest(app)
+            .post(`/v1/auth/forgotPassword`)
+            .send({ email, sendEmail });
+
+        this.newPasswordRequestedToken = response.body.data.newPasswordToken;
+
+        expect(this.validationToken).not.toBeNull();
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBeTruthy();
+    });
+
+    it("update forgotten password", async () => {
+
+        const response = await supertest(app)
+            .post(`/v1/auth/updateForgottenPassword?pvldr=${this.newPasswordRequestedToken}`)
+            .send({ newPassword });
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBeTruthy();
+    });
+
     afterAll(async () => {
         await thisDb.sequelize.close()
     })
-});
-
-describe("forgotPassword()", () => {
-    it("should return true", () => {
-        //Testing a boolean
-        expect(forgotPassword()).toBeTruthy();
-        //Another way to test a boolean
-        expect(forgotPassword()).toEqual(true);
-    });
 });

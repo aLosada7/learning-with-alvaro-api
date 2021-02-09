@@ -17,7 +17,10 @@ module.exports = (sequelize, Sequelize) => {
         },
         emailConfirmed: {
             type: Sequelize.BOOLEAN
-        }
+        },
+        newPasswordToken: {
+            type: Sequelize.STRING
+        },
     });
     
     return User;

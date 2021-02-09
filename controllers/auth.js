@@ -19,7 +19,7 @@ exports.register = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse(`Email already exists.`, 401));
     }
 
-    var validationToken = jwt.sign({ id: email }, process.env.SECRET, {});
+    const validationToken = jwt.sign({ id: email }, process.env.SECRET, {});
 
     const user = await User.create({
         name,
@@ -95,13 +95,6 @@ const emailExists = async (email) => {
     return userExists > 0;
 }
 
-// @desc Forgot password
-// @route POST /api/v1/forgotPassword
-// @access Public
-exports.forgotPassword = () => {
-    return true;
-};
-
 // @desc Confirm register
 // @route POST /api/v1/confirmRegister
 // @access Public
@@ -117,14 +110,12 @@ exports.confirmRegister = async (req, res, next) => {
         return next(new ErrorResponse(`ERROR.AUTH.LOGIN.EMAIL-DOES-NOT-EXISTS`, 401));
     }
 
-
     const userUpdated = await User.update({ emailConfirmed: true }, {
         where: {
             validationToken: user.validationToken
         }
     })
     
-
     if (!userUpdated) {
         return next(new ErrorResponse(`ERROR.AUTH.LOGIN.CANNOT-CONFIRM-REGISTER`, 500));
     }
@@ -132,6 +123,69 @@ exports.confirmRegister = async (req, res, next) => {
     res.status(200).json({ success: true })
 };
 
+// @desc Forgot password
+// @route POST /api/v1/forgotPassword
+// @access Public
+exports.forgotPassword = asyncHandler(async (req, res, next) => {
+    const { email, sendEmail } = req.body;
+
+    const newPasswordToken = jwt.sign({ id: email }, process.env.SECRET, {});
+
+    const userUpdated = await User.update({ newPasswordToken }, {
+        where: {
+            email
+        }
+    })
+
+    if (!userUpdated) {
+        return next(new ErrorResponse(`ERROR.AUTH.LOGIN.CANNOT-CONFIRM-REGISTER`, 500));
+    }
+
+    try {
+        if (!sendEmail || sendEmail !== "no") {
+            await sendEmail({
+                to: user.email,
+                subject : "Request a new password",
+                text: "Request a new password",
+                template: 'passwordForgotten',
+                context: { name: user.name, newPasswordToken }
+            });
+        }
+
+        res.status(200).json({ success: true, data: { newPasswordToken } });
+    } catch (err) {
+        return next(new ErrorResponse(' Email could not be sent', 500));
+    }
+});
+
+// @desc Update forgottenpassword
+// @route POST /api/v1/updateForgottenPassword
+// @access Public
+exports.updateForgottenPassword = async (req, res, next) => {
+    let token = req.query.pvldr;
+    const { password } = req.body;
+
+    const user = await User.findOne({ 
+        attributes: ['newPasswordToken'],
+        where: { newPasswordToken: token } 
+    });
+
+    if (!user) {
+        return next(new ErrorResponse(`ERROR.AUTH.LOGIN.UPDATE-PASSWORD-ERROR`, 401));
+    }
+
+    const userUpdated = await User.update({ password }, {
+        where: {
+            newPasswordToken: user.newPasswordToken
+        }
+    })
+
+    if (!userUpdated) {
+        return next(new ErrorResponse(`ERROR.AUTH.LOGIN.UPDATE-PASSWORD-ERROR`, 401));
+    }
+
+    res.status(200).json({ success: true })
+};
 
 // Get token from model, create cookie and send response
 const sendTokenResponse = (user, statusCode, res) => {

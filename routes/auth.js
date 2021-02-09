@@ -1,5 +1,6 @@
 const express = require('express');
 const {
+    updateForgottenPassword,
     forgotPassword,
     register,
     confirmRegister,
@@ -19,5 +20,8 @@ router
 
 router
     .post('/confirmRegister', confirmRegister);
+
+router
+    .post('/updateForgottenPassword', updateForgottenPassword);
 
 module.exports = router;

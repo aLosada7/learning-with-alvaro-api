@@ -3,7 +3,7 @@ var jwt = require("jsonwebtoken");
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/async');
 const db = require("../models");
-const sendEmail = require('../utils/sendEmail');
+const sendEmailToUser = require('../utils/sendEmail');
 const User = db.users;
 const Op = db.Sequelize.Op;
 
@@ -16,7 +16,7 @@ exports.register = asyncHandler(async (req, res, next) => {
     const doesEmailExists = await emailExists(email);
 
     if (doesEmailExists) {
-        return next(new ErrorResponse(`Email already exists.`, 401));
+        return next(new ErrorResponse(`ERROR.AUTH.REGISTER.EMAIL-ALREADY-EXISTS`, 401));
     }
 
     const validationToken = jwt.sign({ id: email }, process.env.SECRET, {});
@@ -31,12 +31,12 @@ exports.register = asyncHandler(async (req, res, next) => {
     })
 
     if (!user) {
-        return next(new ErrorResponse(`Some error ocurred registering the new user`, 500));
+        return next(new ErrorResponse(`ERROR.AUTH.REGISTER.ERROR-OCURRED`, 500));
     }
 
     try {
         if (!sendEmail || sendEmail !== "no") {
-            await sendEmail({
+            await sendEmailToUser({
                 to: user.email,
                 subject : "Register confirmation",
                 text: "Register confirmation",
@@ -47,9 +47,8 @@ exports.register = asyncHandler(async (req, res, next) => {
 
         res.status(200).json({ success: true, data: user })
     } catch (err) {
-        console.log(err)
         // delete user
-        return next(new ErrorResponse(' Email could not be sent', 500));
+        return next(new ErrorResponse('ERROR.EMAIL-NOT-SENT', 500));
     }
     
 });
@@ -107,7 +106,7 @@ exports.confirmRegister = async (req, res, next) => {
     });
 
     if (!user) {
-        return next(new ErrorResponse(`ERROR.AUTH.LOGIN.EMAIL-DOES-NOT-EXISTS`, 401));
+        return next(new ErrorResponse(`ERROR.SOMETHING-WENT-WRONG`, 401));
     }
 
     const userUpdated = await User.update({ emailConfirmed: true }, {
@@ -117,7 +116,7 @@ exports.confirmRegister = async (req, res, next) => {
     })
     
     if (!userUpdated) {
-        return next(new ErrorResponse(`ERROR.AUTH.LOGIN.CANNOT-CONFIRM-REGISTER`, 500));
+        return next(new ErrorResponse(`ERROR.SOMETHING-WENT-WRONG`, 500));
     }
 
     res.status(200).json({ success: true })
@@ -143,7 +142,7 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
 
     try {
         if (!sendEmail || sendEmail !== "no") {
-            await sendEmail({
+            await sendEmailToUser({
                 to: user.email,
                 subject : "Request a new password",
                 text: "Request a new password",

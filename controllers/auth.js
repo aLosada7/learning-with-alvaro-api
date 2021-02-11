@@ -128,6 +128,11 @@ exports.confirmRegister = async (req, res, next) => {
 exports.forgotPassword = asyncHandler(async (req, res, next) => {
     const { email, sendEmail } = req.body;
 
+    const doesEmailExists = await emailExists(email);
+
+    if (!doesEmailExists) {
+        return next(new ErrorResponse(`ERROR.AUTH.FORGOT-PASSWORD.EMAIL-DOES-NOT-EXISTS`, 401));
+    }
     const newPasswordToken = jwt.sign({ id: email }, process.env.SECRET, {});
 
     const userUpdated = await User.update({ newPasswordToken }, {
@@ -137,23 +142,23 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
     })
 
     if (!userUpdated) {
-        return next(new ErrorResponse(`ERROR.AUTH.LOGIN.CANNOT-CONFIRM-REGISTER`, 500));
+        return next(new ErrorResponse(`ERROR.SOMETHING-WENT-WRONG`, 500));
     }
 
     try {
-        if (!sendEmail || sendEmail !== "no") {
+        if (sendEmail !== "no") {
             await sendEmailToUser({
-                to: user.email,
+                to: email,
                 subject : "Request a new password",
                 text: "Request a new password",
                 template: 'passwordForgotten',
-                context: { name: user.name, newPasswordToken }
+                context: { newPasswordToken }
             });
         }
 
         res.status(200).json({ success: true, data: { newPasswordToken } });
     } catch (err) {
-        return next(new ErrorResponse(' Email could not be sent', 500));
+        return next(new ErrorResponse('ERROR.EMAIL-NOT-SENT', 500));
     }
 });
 

@@ -77,6 +77,8 @@ describe("register a new user", () => {
             .post(`/v1/auth/forgotPassword`)
             .send({ email, sendEmail });
 
+        console.log(response.body.data);
+
         this.newPasswordRequestedToken = response.body.data.newPasswordToken;
 
         expect(this.validationToken).not.toBeNull();

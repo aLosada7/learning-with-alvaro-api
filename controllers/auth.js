@@ -2,10 +2,8 @@
 var jwt = require("jsonwebtoken");
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/async');
-const db = require("../models");
 const sendEmailToUser = require('../utils/sendEmail');
-const User = db.users;
-const Op = db.Sequelize.Op;
+const userRepository = require('../repositories/auth');
 
 // @desc Register user
 // @route POST /api/v1/auth/register
@@ -21,14 +19,14 @@ exports.register = asyncHandler(async (req, res, next) => {
 
     const validationToken = jwt.sign({ id: email }, process.env.SECRET, {});
 
-    const user = await User.create({
+    const user = await userRepository.createUser({
         name,
         lastName,
         email,
         password,
         validationToken,
         emailConfirmed: false
-    })
+    });
 
     if (!user) {
         return next(new ErrorResponse(`ERROR.AUTH.REGISTER.ERROR-OCURRED`, 500));
@@ -65,10 +63,10 @@ exports.login = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse(`Please provide an email and a password`, 400));
     }
 
-    const user = await User.findOne({ 
+    const user = await userRepository.getUser({
         attributes: ['id', 'email', 'password', 'emailConfirmed'],
         where: { email } 
-    });
+    })
 
     if (!user) {
         return next(new ErrorResponse(`ERROR.AUTH.LOGIN.EMAIL-DOES-NOT-EXISTS`, 401));
@@ -90,7 +88,7 @@ exports.login = asyncHandler(async (req, res, next) => {
 });
 
 const emailExists = async (email) => {
-    const userExists = await User.count({ where: { email } });
+    const userExists = await userRepository.userExits({ email });
     return userExists > 0;
 }
 
@@ -100,7 +98,7 @@ const emailExists = async (email) => {
 exports.confirmRegister = async (req, res, next) => {
     let token = req.query.evldr;
 
-    const user = await User.findOne({ 
+    const user = await userRepository.getUser({ 
         attributes: ['validationToken'],
         where: { validationToken: token } 
     });
@@ -109,11 +107,10 @@ exports.confirmRegister = async (req, res, next) => {
         return next(new ErrorResponse(`ERROR.SOMETHING-WENT-WRONG`, 401));
     }
 
-    const userUpdated = await User.update({ emailConfirmed: true }, {
-        where: {
-            validationToken: user.validationToken
-        }
-    })
+    const userUpdated = await userRepository.updateUser({ 
+        attributes: { emailConfirmed: true },
+        where: { validationToken: user.validationToken } 
+    });
     
     if (!userUpdated) {
         return next(new ErrorResponse(`ERROR.SOMETHING-WENT-WRONG`, 500));
@@ -135,11 +132,10 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
     }
     const newPasswordToken = jwt.sign({ id: email }, process.env.SECRET, {});
 
-    const userUpdated = await User.update({ newPasswordToken }, {
-        where: {
-            email
-        }
-    })
+    const userUpdated = await userRepository.updateUser({ 
+        attributes: { newPasswordToken },
+        where: { email } 
+    });
 
     if (!userUpdated) {
         return next(new ErrorResponse(`ERROR.SOMETHING-WENT-WRONG`, 500));
@@ -169,23 +165,24 @@ exports.updateForgottenPassword = async (req, res, next) => {
     let token = req.query.pvldr;
     const { password } = req.body;
 
-    const user = await User.findOne({ 
-        attributes: ['newPasswordToken'],
+    const user = await userRepository.getUser({ 
+        attributes: ['password', 'newPasswordToken'],
         where: { newPasswordToken: token } 
     });
 
     if (!user) {
-        return next(new ErrorResponse(`ERROR.AUTH.LOGIN.UPDATE-PASSWORD-ERROR`, 401));
+        return next(new ErrorResponse(`ERROR.AUTH.FORGOT-PASSWORD.UPDATE-PASSWORD`, 401));
     }
 
-    const userUpdated = await User.update({ password }, {
+    const userUpdated = await userRepository.updateUser({ 
+        attributes: { password: password, newPasswordToken: null },
         where: {
-            newPasswordToken: user.newPasswordToken
+            newPasswordToken: token
         }
-    })
+    });
 
     if (!userUpdated) {
-        return next(new ErrorResponse(`ERROR.AUTH.LOGIN.UPDATE-PASSWORD-ERROR`, 401));
+        return next(new ErrorResponse(`ERROR.SOMETHING-WENT-WRONG`, 500));
     }
 
     res.status(200).json({ success: true })

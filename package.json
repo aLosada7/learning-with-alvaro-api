@@ -8,6 +8,10 @@
     "test": "NODE_ENV=test jest",
     "test:watch": "jest --watchAll"
   },
+  "engines": {
+    "node": "12.15.0",
+    "npm": "6.13.4"
+  },
   "author": "Alvaro Losada de Castro",
   "license": "ISC",
   "dependencies": {

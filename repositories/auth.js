@@ -21,5 +21,5 @@ exports.updateUser = async(user) => {
 }
 
 exports.userExits = async(condition) => {
-    return User.count({ where: condition });
+    return await User.count({ where: condition });
 }

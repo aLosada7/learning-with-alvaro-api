@@ -17,7 +17,7 @@ exports.register = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse(`ERROR.AUTH.REGISTER.EMAIL-ALREADY-EXISTS`, 401));
     }
 
-    const validationToken = jwt.sign({ id: email }, process.env.SECRET, {});
+    const validationToken = jwt.sign({ id: email }, process.env.JWT_SECRET, {});
 
     const user = await userRepository.createUser({
         name,
@@ -130,7 +130,7 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
     if (!doesEmailExists) {
         return next(new ErrorResponse(`ERROR.AUTH.FORGOT-PASSWORD.EMAIL-DOES-NOT-EXISTS`, 401));
     }
-    const newPasswordToken = jwt.sign({ id: email }, process.env.SECRET, {});
+    const newPasswordToken = jwt.sign({ id: email }, process.env.JWT_SECRET, {});
 
     const userUpdated = await userRepository.updateUser({ 
         attributes: { newPasswordToken },
@@ -161,7 +161,7 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
 // @desc Update forgottenpassword
 // @route POST /api/v1/updateForgottenPassword
 // @access Public
-exports.updateForgottenPassword = async (req, res, next) => {
+exports.newPassword = async (req, res, next) => {
     let token = req.query.pvldr;
     const { password } = req.body;
 
@@ -185,13 +185,36 @@ exports.updateForgottenPassword = async (req, res, next) => {
         return next(new ErrorResponse(`ERROR.SOMETHING-WENT-WRONG`, 500));
     }
 
-    res.status(200).json({ success: true })
+    res.status(200).json({ success: true });
 };
+
+// @desc Get user by id
+// @route POST /api/v1/getUser
+// @access Public
+exports.getUser = async(req, res, next) => {
+
+    const id = req.userId;
+
+    if(!id) {
+        return next(new ErrorResponse(`ERROR.AUTH.USER-NOT-FOUND`, 401));
+    }
+
+    const user = await userRepository.getUser({
+        attributes: ['email', 'name'],
+        where: { id }
+    })
+
+    if (!user) {
+        return next(new ErrorResponse(`ERROR.AUTH.USER-NOT-FOUND`, 401));
+    }
+
+    res.status(200).json({ success: true, user });
+}
 
 // Get token from model, create cookie and send response
 const sendTokenResponse = (user, statusCode, res) => {
     // Create token
-    var token = jwt.sign({ id: user.id }, process.env.SECRET, {});
+    var token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {});
 
     const options = {
         expires: new Date(Date.now() + process.env.JWT_COOKIE_EXPIRE * 24 * 60 * 60 * 1000),

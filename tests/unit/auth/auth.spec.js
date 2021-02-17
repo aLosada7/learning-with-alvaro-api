@@ -65,10 +65,36 @@ describe("register a new user", () => {
 
         const response = await supertest(app)
             .post('/v1/auth/login')
-            .send({ email , password })
+            .send({ email , password });
+        
+        this.token = response.body.token;
 
         expect(response.status).toBe(200);
         expect(response.body.success).toBeTruthy();
+    });
+
+    it("getUser which exists", async () => {
+
+        const response = await supertest(app)
+            .get('/v1/auth/getUser')
+            .auth(this.token, { type: 'bearer' });
+        
+        console.log(response.body)
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBeTruthy();
+        expect(response.body.user).toEqual({ email: 'aldc30sc@gmail.com', name: 'Alvaro' });
+    });
+
+    it("getUser error", async () => {
+        const wrongToken = this.token.slice(0, -1) + 'a';
+
+        const response = await supertest(app)
+            .get('/v1/auth/getUser')
+            .auth(wrongToken, { type: 'bearer' });
+
+        expect(response.status).toBe(401);
+        expect(response.body.success).toBeFalsy();
     });
 
     it("request new password / forgot password", async () => {
@@ -76,8 +102,6 @@ describe("register a new user", () => {
         const response = await supertest(app)
             .post(`/v1/auth/forgotPassword`)
             .send({ email, sendEmail });
-
-        console.log(response.body.data);
 
         this.newPasswordRequestedToken = response.body.data.newPasswordToken;
 

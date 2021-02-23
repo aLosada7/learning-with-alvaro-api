@@ -5,10 +5,32 @@ const asyncHandler = require('../middleware/async');
 const sendEmailToUser = require('../utils/sendEmail');
 const userRepository = require('../repositories/auth');
 
-// @desc Register user
-// @route POST /api/v1/auth/register
+// @desc Get own user
+// @route GET /api/v1/auth/user
 // @access Public
-exports.register = asyncHandler(async (req, res, next) => {
+exports.getUser = async(req, res, next) => {
+    const id = req.userId;
+
+    if(!id) {
+        return next(new ErrorResponse(`ERROR.AUTH.USER-NOT-FOUND`, 401));
+    }
+
+    const user = await userRepository.getUser({
+        attributes: ['id', 'email', 'name', 'lastName'],
+        where: { id }
+    })
+
+    if (!user) {
+        return next(new ErrorResponse(`ERROR.AUTH.USER-NOT-FOUND`, 401));
+    }
+
+    res.status(200).json(user);
+}
+
+// @desc Create new user
+// @route POST /api/v1/auth/user
+// @access Public
+exports.createUser = asyncHandler(async (req, res, next) => {
     const { name, lastName, email, password, sendEmail } = req.body;
 
     const doesEmailExists = await emailExists(email);
@@ -43,7 +65,7 @@ exports.register = asyncHandler(async (req, res, next) => {
             });
         }
 
-        res.status(200).json({ success: true, data: user })
+        res.status(201).json(user)
     } catch (err) {
         // delete user
         return next(new ErrorResponse('ERROR.EMAIL-NOT-SENT', 500));
@@ -93,9 +115,9 @@ const emailExists = async (email) => {
 }
 
 // @desc Confirm register
-// @route POST /api/v1/confirmRegister
+// @route POST /api/v1/auth/email/confirmation
 // @access Public
-exports.confirmRegister = async (req, res, next) => {
+exports.confirmEmail = async (req, res, next) => {
     let token = req.query.evldr;
 
     const user = await userRepository.getUser({ 
@@ -120,9 +142,9 @@ exports.confirmRegister = async (req, res, next) => {
 };
 
 // @desc Forgot password
-// @route POST /api/v1/forgotPassword
+// @route POST /api/v1/auth/password/request
 // @access Public
-exports.forgotPassword = asyncHandler(async (req, res, next) => {
+exports.requestPassword = asyncHandler(async (req, res, next) => {
     const { email, sendEmail } = req.body;
 
     const doesEmailExists = await emailExists(email);
@@ -152,16 +174,16 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
             });
         }
 
-        res.status(200).json({ success: true, data: { newPasswordToken } });
+        res.status(200).json({ newPasswordToken });
     } catch (err) {
         return next(new ErrorResponse('ERROR.EMAIL-NOT-SENT', 500));
     }
 });
 
-// @desc Update forgottenpassword
-// @route POST /api/v1/updateForgottenPassword
+// @desc Update a password
+// @route POST /api/v1/auth/password/create
 // @access Public
-exports.newPassword = async (req, res, next) => {
+exports.updatePassword = async (req, res, next) => {
     let token = req.query.pvldr;
     const { password } = req.body;
 
@@ -188,29 +210,6 @@ exports.newPassword = async (req, res, next) => {
     res.status(200).json({ success: true });
 };
 
-// @desc Get user by id
-// @route POST /api/v1/getUser
-// @access Public
-exports.getUser = async(req, res, next) => {
-
-    const id = req.userId;
-
-    if(!id) {
-        return next(new ErrorResponse(`ERROR.AUTH.USER-NOT-FOUND`, 401));
-    }
-
-    const user = await userRepository.getUser({
-        attributes: ['email', 'name'],
-        where: { id }
-    })
-
-    if (!user) {
-        return next(new ErrorResponse(`ERROR.AUTH.USER-NOT-FOUND`, 401));
-    }
-
-    res.status(200).json({ success: true, user });
-}
-
 // Get token from model, create cookie and send response
 const sendTokenResponse = (user, statusCode, res) => {
     // Create token
@@ -229,7 +228,6 @@ const sendTokenResponse = (user, statusCode, res) => {
         .status(statusCode)
         .cookie('token', token, options)
         .json({
-            success: true,
             token
         })
 };

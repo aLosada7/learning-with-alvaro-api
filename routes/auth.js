@@ -1,9 +1,9 @@
 const express = require('express');
 const {
-    newPassword,
-    forgotPassword,
-    register,
-    confirmRegister,
+    requestPassword,
+    updatePassword,
+    createUser,
+    confirmEmail,
     login,
     getUser
 } = require('../controllers/auth');
@@ -13,21 +13,21 @@ const router = express.Router();
 const { protect } = require('../middleware/auth');
 
 router
-    .post('/register', register);
+    .get('/user', protect, getUser);
+
+router
+    .post('/user', createUser);
 
 router
     .post('/login', login);
 
 router
-    .post('/forgotPassword', forgotPassword);
+    .put('/email/confirmation', confirmEmail);
 
 router
-    .post('/confirmRegister', confirmRegister);
+    .post('/password/request', requestPassword);
 
 router
-    .post('/updateForgottenPassword', newPassword);
-
-router
-    .get('/getUser', protect, getUser);
+    .put('/password/create', updatePassword);
 
 module.exports = router;

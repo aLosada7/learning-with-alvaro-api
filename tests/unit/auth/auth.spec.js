@@ -6,7 +6,7 @@ const supertest = require('supertest')
 const app = require("../../../server");
 const db = require("../../../models");
 
-describe("register a new user", () => {
+describe("User", () => {
 
     let thisDb = db;
     const { name, lastName, email, password, sendEmail, newPassword } = {
@@ -25,19 +25,19 @@ describe("register a new user", () => {
     it("create a new user", async () => {
 
         const response = await supertest(app)
-            .post('/v1/auth/register')
+            .post('/v1/auth/user')
             .send({ name, lastName, email, password, sendEmail })
         
-        this.validationToken = response.body.data.validationToken;
+        this.validationToken = response.body.validationToken;
 
-        expect(response.status).toBe(200);
-        expect(response.body.success).toBeTruthy();
+        expect(response.status).toBe(201);
+        expect(response.body).toBeTruthy();
     });
 
     it("check if the user already exists", async () => {
 
         const response = await supertest(app)
-            .post('/v1/auth/register')
+            .post('/v1/auth/user')
             .send({ email, password })
 
         expect(response.status).toBe(401);
@@ -46,7 +46,7 @@ describe("register a new user", () => {
     it("wrong register confirmation", async () => {
 
         const response = await supertest(app)
-            .post(`/v1/auth/confirmRegister?evldr=adadada${this.validationToken}dadadadad`);
+            .put(`/v1/auth/email/confirmation?evldr=adadada${this.validationToken}dadadadad`);
 
         expect(response.status).toBe(401);
         expect(response.body.success).not.toBeTruthy();
@@ -55,7 +55,7 @@ describe("register a new user", () => {
     it("register confirmation", async () => {
 
         const response = await supertest(app)
-            .post(`/v1/auth/confirmRegister?evldr=${this.validationToken}`);
+            .put(`/v1/auth/email/confirmation?evldr=${this.validationToken}`);
 
         expect(response.status).toBe(200);
         expect(response.body.success).toBeTruthy();
@@ -70,50 +70,50 @@ describe("register a new user", () => {
         this.token = response.body.token;
 
         expect(response.status).toBe(200);
-        expect(response.body.success).toBeTruthy();
+        expect(response.body).toBeTruthy();
     });
 
-    it("getUser which exists", async () => {
+    it("getMe which exists", async () => {
 
         const response = await supertest(app)
-            .get('/v1/auth/getUser')
+            .get('/v1/auth/user')
             .auth(this.token, { type: 'bearer' });
         
         console.log(response.body)
 
         expect(response.status).toBe(200);
-        expect(response.body.success).toBeTruthy();
-        expect(response.body.user).toEqual({ email: 'aldc30sc@gmail.com', name: 'Alvaro' });
+        expect(response.body).toEqual({email: 'aldc30sc@gmail.com', name: 'Alvaro', id: 1, "lastName": "Losada de Castro" });
     });
 
-    it("getUser error", async () => {
+    it("getMe error", async () => {
         const wrongToken = this.token.slice(0, -1) + 'a';
 
         const response = await supertest(app)
-            .get('/v1/auth/getUser')
+            .get('/v1/auth/user')
             .auth(wrongToken, { type: 'bearer' });
 
         expect(response.status).toBe(401);
-        expect(response.body.success).toBeFalsy();
+        expect(response.body.error).toBe('ERROR.AUTH.USER-NOT-FOUND');
     });
 
     it("request new password / forgot password", async () => {
 
         const response = await supertest(app)
-            .post(`/v1/auth/forgotPassword`)
+            .post(`/v1/auth/password/request`)
             .send({ email, sendEmail });
 
-        this.newPasswordRequestedToken = response.body.data.newPasswordToken;
+        this.newPasswordRequestedToken = response.body.newPasswordToken;
 
         expect(this.validationToken).not.toBeNull();
         expect(response.status).toBe(200);
-        expect(response.body.success).toBeTruthy();
     });
 
     it("update forgotten password", async () => {
 
+        console.log(this.newPasswordRequestedToken)
+
         const response = await supertest(app)
-            .post(`/v1/auth/updateForgottenPassword?pvldr=${this.newPasswordRequestedToken}`)
+            .put(`/v1/auth/password/create?pvldr=${this.newPasswordRequestedToken}`)
             .send({ newPassword });
 
         expect(response.status).toBe(200);

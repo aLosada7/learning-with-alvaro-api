@@ -4,6 +4,7 @@ const errorHandler = (err, req, res, next) => {
     let error = { ...err };
 
     error.message = err.message;
+    error.detail = err.detail;
     // Log to console for dev
     console.log(err);
 
@@ -26,8 +27,8 @@ const errorHandler = (err, req, res, next) => {
     }
 
     res.status(error.statusCode || 500).json({ 
-        success: false, 
-        error: error.message || 'Server Error' 
+        error: error.message || 'Server Error',
+        detail: error.detail || undefined
     });
 }
 

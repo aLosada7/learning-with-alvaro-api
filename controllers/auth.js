@@ -1,4 +1,4 @@
-//const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 var jwt = require("jsonwebtoken");
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/async');
@@ -41,11 +41,13 @@ exports.createUser = asyncHandler(async (req, res, next) => {
 
     const validationToken = jwt.sign({ id: email }, process.env.JWT_SECRET, {});
 
+    const hashedPassword = await bcrypt.hash(password, 8);
+
     const user = await userRepository.createUser({
         name,
         lastName,
         email,
-        password,
+        password: hashedPassword,
         validationToken,
         emailConfirmed: false
     });
@@ -100,7 +102,7 @@ exports.login = asyncHandler(async (req, res, next) => {
     }
 
     // Check if password matches
-    const isMatch =  user.password === password;
+    const isMatch =  await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
         return next(new ErrorResponse(`ERROR.AUTH.LOGIN.INVALID-CREDENTIALS`, 401));
@@ -117,7 +119,7 @@ const emailExists = async (email) => {
 // @desc Confirm register
 // @route POST /api/v1/auth/email/confirmation
 // @access Public
-exports.confirmEmail = async (req, res, next) => {
+exports.confirmEmail = asyncHandler(async (req, res, next) => {
     let token = req.query.evldr;
 
     const user = await userRepository.getUser({ 
@@ -139,7 +141,7 @@ exports.confirmEmail = async (req, res, next) => {
     }
 
     res.status(200).json({ success: true })
-};
+});
 
 // @desc Forgot password
 // @route POST /api/v1/auth/password/request
@@ -183,7 +185,7 @@ exports.requestPassword = asyncHandler(async (req, res, next) => {
 // @desc Update a password
 // @route POST /api/v1/auth/password/create
 // @access Public
-exports.updatePassword = async (req, res, next) => {
+exports.updatePassword = asyncHandler(async(req, res, next) => {
     let token = req.query.pvldr;
     const { password } = req.body;
 
@@ -196,8 +198,14 @@ exports.updatePassword = async (req, res, next) => {
         return next(new ErrorResponse(`ERROR.AUTH.FORGOT-PASSWORD.UPDATE-PASSWORD`, 401));
     }
 
+    console.log(password);
+
+    const hashedPassword = await bcrypt.hash(password, 8);
+
+    console.log(hashedPassword);
+
     const userUpdated = await userRepository.updateUser({ 
-        attributes: { password: password, newPasswordToken: null },
+        attributes: { password: hashedPassword, newPasswordToken: null },
         where: {
             newPasswordToken: token
         }
@@ -208,7 +216,7 @@ exports.updatePassword = async (req, res, next) => {
     }
 
     res.status(200).json({ success: true });
-};
+});
 
 // Get token from model, create cookie and send response
 const sendTokenResponse = (user, statusCode, res) => {

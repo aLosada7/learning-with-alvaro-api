@@ -78,8 +78,6 @@ describe("User", () => {
         const response = await supertest(app)
             .get('/v1/auth/user')
             .auth(this.token, { type: 'bearer' });
-        
-        console.log(response.body)
 
         expect(response.status).toBe(200);
         expect(response.body).toEqual({email: 'aldc30sc@gmail.com', name: 'Alvaro', id: 1, "lastName": "Losada de Castro" });
@@ -110,11 +108,9 @@ describe("User", () => {
 
     it("update forgotten password", async () => {
 
-        console.log(this.newPasswordRequestedToken)
-
         const response = await supertest(app)
             .put(`/v1/auth/password/create?pvldr=${this.newPasswordRequestedToken}`)
-            .send({ newPassword });
+            .send({ password: newPassword });
 
         expect(response.status).toBe(200);
         expect(response.body.success).toBeTruthy();
